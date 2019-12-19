@@ -1,4 +1,4 @@
-const htmlUtils = require('lib/htmlUtils');
+const htmlUtils = require('./htmlUtils');
 const utils = require('./utils');
 const noteStyle = require('./noteStyle');
 
@@ -6,13 +6,14 @@ class HtmlToHtml {
 	constructor(options) {
 		if (!options) options = {};
 		this.resourceBaseUrl_ = 'resourceBaseUrl' in options ? options.resourceBaseUrl : null;
+		this.ResourceModel_ = options.ResourceModel;
 	}
 
 	render(markup, theme, options) {
 		const html = htmlUtils.processImageTags(markup, data => {
 			if (!data.src) return null;
 
-			const r = utils.imageReplacement(data.src, options.resources, this.resourceBaseUrl_);
+			const r = utils.imageReplacement(this.ResourceModel_, data.src, options.resources, this.resourceBaseUrl_);
 			if (!r) return null;
 
 			if (typeof r === 'string') {

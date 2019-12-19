@@ -1,6 +1,5 @@
 const MdToHtml = require('./MdToHtml');
 const HtmlToHtml = require('./HtmlToHtml');
-const Note = require('lib/models/Note');
 
 class MarkupToHtml {
 	constructor(options) {
@@ -15,9 +14,9 @@ class MarkupToHtml {
 
 		let RendererClass = null;
 
-		if (markupLanguage === Note.MARKUP_LANGUAGE_MARKDOWN) {
+		if (markupLanguage === MarkupToHtml.MARKUP_LANGUAGE_MARKDOWN) {
 			RendererClass = MdToHtml;
-		} else if (markupLanguage === Note.MARKUP_LANGUAGE_HTML) {
+		} else if (markupLanguage === MarkupToHtml.MARKUP_LANGUAGE_HTML) {
 			RendererClass = HtmlToHtml;
 		} else {
 			throw new Error(`Invalid markup language: ${markupLanguage}`);
@@ -35,5 +34,8 @@ class MarkupToHtml {
 		return this.renderer(markupLanguage).render(markup, theme, options);
 	}
 }
+
+MarkupToHtml.MARKUP_LANGUAGE_MARKDOWN = 1;
+MarkupToHtml.MARKUP_LANGUAGE_HTML = 2;
 
 module.exports = MarkupToHtml;

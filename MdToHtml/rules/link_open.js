@@ -1,7 +1,7 @@
 const Entities = require('html-entities').AllHtmlEntities;
 const htmlentities = new Entities().encode;
 const utils = require('../../utils');
-const urlUtils = require('lib/urlUtils.js');
+const urlUtils = require('../../urlUtils.js');
 const { getClassNameForMimeType } = require('font-awesome-filetypes');
 
 function installRule(markdownIt, mdOptions, ruleOptions) {
@@ -20,7 +20,7 @@ function installRule(markdownIt, mdOptions, ruleOptions) {
 			const resourceId = resourceHrefInfo.itemId;
 
 			const result = ruleOptions.resources[resourceId];
-			const resourceStatus = utils.resourceStatus(result);
+			const resourceStatus = utils.resourceStatus(ruleOptions.ResourceModel, result);
 
 			if (result && result.item) {
 				title = utils.getAttr(token.attrs, 'title', result.item.title);

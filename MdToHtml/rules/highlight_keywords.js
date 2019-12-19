@@ -1,4 +1,4 @@
-const StringUtils = require('lib/string-utils.js');
+const stringUtils = require('../../stringUtils.js');
 const md5 = require('md5');
 
 function createHighlightedTokens(Token, splitted) {
@@ -49,7 +49,7 @@ function installRule(markdownIt, mdOptions, ruleOptions) {
 				const child = token.children[j];
 				if (child.type !== 'text') continue;
 
-				const splitted = StringUtils.surroundKeywords(keywords, child.content, divider, divider).split(divider);
+				const splitted = stringUtils.surroundKeywords(keywords, child.content, divider, divider).split(divider);
 				const splittedTokens = createHighlightedTokens(Token, splitted);
 				if (splittedTokens.length <= 1) continue;
 

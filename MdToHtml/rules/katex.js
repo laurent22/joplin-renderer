@@ -2,10 +2,7 @@
 
 'use strict';
 
-const { shim } = require('lib/shim');
-const Setting = require('lib/models/Setting');
 var katex = require('katex');
-const katexCss = require('lib/csstojs/katex.css.js');
 const md5 = require('md5');
 const mhchemModule = require('./katex_mhchem.js');
 
@@ -204,28 +201,12 @@ module.exports = function(context) {
 	context.__katex = { macros: {} };
 
 	const addContextAssets = () => {
-		context.css['katex'] = katexCss;
-		context.assetLoaders['katex'] = async () => {
-			if (assetsLoaded_) return;
-
-			// In node, the fonts are simply copied using copycss to where Katex expects to find them, which is under app/gui/note-viewer/fonts
-
-			// In React Native, it's more complicated and we need to download and copy them to the right directory. Ideally, we should embed
-			// them as an asset and copy them from there (or load them from there by modifying Katex CSS), but for now that will do.
-
-			if (shim.isReactNative()) {
-				// Fonts must go under the resourceDir directory because this is the baseUrl of NoteBodyViewer
-				const baseDir = Setting.value('resourceDir');
-				await shim.fsDriver().mkdir(`${baseDir}/fonts`);
-
-				await shim.fetchBlob('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-beta1/fonts/KaTeX_Main-Regular.woff2', { overwrite: false, path: `${baseDir}/fonts/KaTeX_Main-Regular.woff2` });
-				await shim.fetchBlob('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-beta1/fonts/KaTeX_Math-Italic.woff2', { overwrite: false, path: `${baseDir}/fonts/KaTeX_Math-Italic.woff2` });
-				await shim.fetchBlob('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-beta1/fonts/KaTeX_Size1-Regular.woff2', { overwrite: false, path: `${baseDir}/fonts/KaTeX_Size1-Regular.woff2` });
-			}
-
-			// eslint-disable-next-line require-atomic-updates
-			assetsLoaded_ = true;
-		};
+		context.pluginAssets['katex'] = [
+			{ name: 'katex.css' },
+			{ name: 'fonts/KaTeX_Main-Regular.woff2' },
+			{ name: 'fonts/KaTeX_Math-Italic.woff2' },
+			{ name: 'fonts/KaTeX_Size1-Regular.woff2' },
+		];
 	};
 
 	function renderToStringWithCache(latex, options) {

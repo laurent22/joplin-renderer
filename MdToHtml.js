@@ -1,8 +1,7 @@
 const MarkdownIt = require('markdown-it');
-const { shim } = require('lib/shim.js');
 const md5 = require('md5');
 const noteStyle = require('./noteStyle');
-const Setting = require('lib/models/Setting.js');
+const { fileExtension } = require('./pathUtils');
 const rules = {
 	image: require('./MdToHtml/rules/image'),
 	checkbox: require('./MdToHtml/rules/checkbox'),
@@ -30,6 +29,7 @@ const plugins = {
 	multitable: { module: require('markdown-it-multimd-table'), options: { enableMultilineRows: true, enableRowspan: true } },
 	toc: { module: require('markdown-it-toc-done-right'), options: { listType: 'ul', slugify: uslugify } },
 };
+const defaultNoteStyle = require('./defaultNoteStyle');
 
 function uslugify(s) {
 	return uslug(s);
@@ -47,13 +47,71 @@ class MdToHtml {
 		this.lastCodeHighlightCacheKey_ = null;
 		this.cachedHighlightedCode_ = {};
 		this.ResourceModel_ = options.ResourceModel;
+		this.pluginOptions_ = options.pluginOptions ? options.pluginOptions : {};
 	}
 
-	render(body, style, options = null) {
+	pluginOptions(name) {
+		let o = this.pluginOptions_[name] ? this.pluginOptions_[name] : {};
+		o = Object.assign({
+			enabled: true,
+		}, o);
+		return o;
+	}
+
+	pluginEnabled(name) {
+		return this.pluginOptions(name).enabled;
+	}
+
+	processPluginAssets(pluginAssets) {
+		console.info('pluginAssets', pluginAssets);
+
+		const files = [];
+		const cssStrings = [];
+		for (const pluginName in pluginAssets) {
+			for (const asset of pluginAssets[pluginName]) {
+				let mime = asset.mime;
+
+				if (!mime && asset.inline) throw new Error('Mime type is required for inline assets');
+
+				if (!mime) {
+					const ext = fileExtension(asset.name).toLowerCase();
+					// For now it's only useful to support CSS and JS because that's what needs to be added
+					// by the caller with <script> or <style> tags. Everything, like fonts, etc. is loaded
+					// via CSS or some other ways.
+					mime = 'application/octet-stream';
+					if (ext === 'css') mime = 'text/css';
+					if (ext === 'js') mime = 'application/javascript';
+				}
+
+				if (asset.inline) {
+					if (mime === 'text/css') {
+						cssStrings.push(asset.text);
+					} else {
+						throw new Error('Unsupported inline mime type: ' + mime);
+					}
+				} else {
+					files.push(Object.assign({}, asset, {
+						name: pluginName + '/' + asset.name,
+						mime: mime,
+					}));
+				}
+			}
+		}
+
+		return {
+			files: files,
+			cssStrings: cssStrings,
+		}
+	}
+
+	async render(body, style = null, options = null) {
 		if (!options) options = {};
 		if (!options.postMessageSyntax) options.postMessageSyntax = 'postMessage';
 		if (!options.paddingBottom) options.paddingBottom = '0';
 		if (!options.highlightedKeywords) options.highlightedKeywords = [];
+		if (!options.codeTheme) options.codeTheme = 'atom-one-light.css';
+
+		if (!style) style = Object.assign({}, defaultNoteStyle);
 
 		// The "codeHighlightCacheKey" option indicates what set of cached object should be
 		// associated with this particular Markdown body. It is only used to allow us to
@@ -64,17 +122,13 @@ class MdToHtml {
 			this.lastCodeHighlightCacheKey_ = options.codeHighlightCacheKey;
 		}
 
-		const breaks_ = Setting.value('markdown.softbreaks') ? false : true;
-		const typographer_ = Setting.value('markdown.typographer') ? true : false;
-
 		const cacheKey = md5(escape(body + JSON.stringify(options) + JSON.stringify(style)));
 		const cachedOutput = this.cachedOutputs_[cacheKey];
 		if (cachedOutput) return cachedOutput;
 
 		const context = {
 			css: {},
-			cssFiles: {},
-			assetLoaders: {},
+			pluginAssets: {},
 		};
 
 		const ruleOptions = Object.assign({}, options, {
@@ -83,8 +137,8 @@ class MdToHtml {
 		});
 
 		const markdownIt = new MarkdownIt({
-			breaks: breaks_,
-			typographer: typographer_,
+			breaks: !this.pluginEnabled('softbreaks'),
+			typographer: this.pluginEnabled('typographer'),
 			linkify: true,
 			html: true,
 			highlight: (str, lang) => {
@@ -104,11 +158,9 @@ class MdToHtml {
 						this.cachedHighlightedCode_[cacheKey] = hlCode;
 					}
 
-					if (shim.isReactNative()) {
-						context.css['hljs'] = shim.loadCssFromJs(options.codeTheme);
-					} else {
-						context.cssFiles['hljs'] = `highlight/styles/${options.codeTheme}`;
-					}
+					context.pluginAssets['highlight.js'] = [
+						{ name: options.codeTheme }
+					];
 
 					return `<pre class="hljs"><code>${hlCode}</code></pre>`;
 				} catch (error) {
@@ -141,42 +193,32 @@ class MdToHtml {
 		//    const imagePlugin = require('./MdToHtml/rules/image');
 		//    markdownIt.use(imagePlugin(context, ruleOptions));
 		//
-		//    Using the `context` object, a plugin can send back either CSS strings (in .css) or CSS files that need
-		//    to be loaded (in .cssFiles). In general, the desktop app will load the CSS files and the mobile app
-		//    will load the CSS strings.
+		// Using the `context` object, a plugin can define what additional assets they need (css, fonts, etc.) using context.pluginAssets.
+		// The calling application will need to handle loading these assets.
 
 		markdownIt.use(rules.image(context, ruleOptions));
 		markdownIt.use(rules.checkbox(context, ruleOptions));
 		markdownIt.use(rules.link_open(context, ruleOptions));
 		markdownIt.use(rules.html_image(context, ruleOptions));
-		if (Setting.value('markdown.plugin.katex')) markdownIt.use(rules.katex(context, ruleOptions));
-		if (Setting.value('markdown.plugin.fountain')) markdownIt.use(rules.fountain(context, ruleOptions));
+		if (this.pluginEnabled('katex')) markdownIt.use(rules.katex(context, ruleOptions));
+		if (this.pluginEnabled('fountain')) markdownIt.use(rules.fountain(context, ruleOptions));
 		markdownIt.use(rules.highlight_keywords(context, ruleOptions));
 		markdownIt.use(rules.code_inline(context, ruleOptions));
 		markdownIt.use(markdownItAnchor, { slugify: uslugify });
 
 		for (let key in plugins) {
-			if (Setting.value(`markdown.plugin.${key}`)) markdownIt.use(plugins[key].module, plugins[key].options);
+			if (this.pluginEnabled(key)) markdownIt.use(plugins[key].module, plugins[key].options);
 		}
 
 		setupLinkify(markdownIt);
 
 		const renderedBody = markdownIt.render(body);
 
-		const cssStrings = noteStyle(style, options);
+		let cssStrings = noteStyle(style, options);
 
-		for (let k in context.css) {
-			if (!context.css.hasOwnProperty(k)) continue;
-			cssStrings.push(context.css[k]);
-		}
-
-		for (let k in context.assetLoaders) {
-			if (!context.assetLoaders.hasOwnProperty(k)) continue;
-			context.assetLoaders[k]().catch(error => {
-				console.warn(`MdToHtml: Error loading assets for ${k}: `, error.message);
-			});
-		}
-
+		const pluginAssets = this.processPluginAssets(context.pluginAssets);
+		cssStrings = cssStrings.concat(pluginAssets.cssStrings);
+		
 		if (options.userCss) cssStrings.push(options.userCss);
 
 		const styleHtml = `<style>${cssStrings.join('\n')}</style>`;
@@ -185,7 +227,7 @@ class MdToHtml {
 
 		const output = {
 			html: html,
-			cssFiles: Object.keys(context.cssFiles).map(k => context.cssFiles[k]),
+			pluginAssets: pluginAssets.files,
 		};
 
 		// Fow now, we keep only the last entry in the cache

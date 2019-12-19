@@ -113,7 +113,15 @@ function installRule(markdownIt, mdOptions, ruleOptions, context) {
 				itemClass += ' md-checkbox';
 				currentListItem.attrSet('class', itemClass.trim());
 
-				context.css['checkbox'] = checkboxStyle;
+				if (!('checkbox' in context.pluginAssets)) {
+					context.pluginAssets['checkbox'] = [
+						{
+							inline: true,
+							text: checkboxStyle,
+							mime: 'text/css',
+						},
+					];
+				}
 			}
 		}
 	});

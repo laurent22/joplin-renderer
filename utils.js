@@ -1,6 +1,13 @@
-const Resource = require('lib/models/Resource.js');
 const Entities = require('html-entities').AllHtmlEntities;
 const htmlentities = new Entities().encode;
+
+// Imported from models/Resource.js
+const FetchStatuses = {
+	FETCH_STATUS_IDLE: 0,
+	FETCH_STATUS_STARTED: 1,
+	FETCH_STATUS_DONE: 2,
+	FETCH_STATUS_ERROR: 3,
+}
 
 const utils = {};
 
@@ -70,18 +77,20 @@ utils.resourceStatusFile = function(state) {
 	throw new Error(`Unknown state: ${state}`);
 };
 
-utils.resourceStatus = function(resourceInfo) {
+utils.resourceStatus = function(ResourceModel, resourceInfo) {
+	if (!ResourceModel) return 'ready';
+
 	let resourceStatus = 'ready';
 
 	if (resourceInfo) {
 		const resource = resourceInfo.item;
 		const localState = resourceInfo.localState;
 
-		if (localState.fetch_status === Resource.FETCH_STATUS_IDLE) {
+		if (localState.fetch_status === FetchStatuses.FETCH_STATUS_IDLE) {
 			resourceStatus = 'notDownloaded';
-		} else if (localState.fetch_status === Resource.FETCH_STATUS_STARTED) {
+		} else if (localState.fetch_status === FetchStatuses.FETCH_STATUS_STARTED) {
 			resourceStatus = 'downloading';
-		} else if (localState.fetch_status === Resource.FETCH_STATUS_DONE) {
+		} else if (localState.fetch_status === FetchStatuses.FETCH_STATUS_DONE) {
 			if (resource.encryption_blob_encrypted || resource.encryption_applied) {
 				resourceStatus = 'encrypted';
 			}
@@ -93,13 +102,15 @@ utils.resourceStatus = function(resourceInfo) {
 	return resourceStatus;
 };
 
-utils.imageReplacement = function(src, resources, resourceBaseUrl) {
-	if (!Resource.isResourceUrl(src)) return null;
+utils.imageReplacement = function(ResourceModel, src, resources, resourceBaseUrl) {
+	if (!ResourceModel) return null;
 
-	const resourceId = Resource.urlToId(src);
+	if (!ResourceModel.isResourceUrl(src)) return null;
+
+	const resourceId = ResourceModel.urlToId(src);
 	const result = resources[resourceId];
 	const resource = result ? result.item : null;
-	const resourceStatus = utils.resourceStatus(result);
+	const resourceStatus = utils.resourceStatus(ResourceModel, result);
 
 	if (resourceStatus !== 'ready') {
 		const icon = utils.resourceStatusImage(resourceStatus);
@@ -107,8 +118,8 @@ utils.imageReplacement = function(src, resources, resourceBaseUrl) {
 	}
 
 	const mime = resource.mime ? resource.mime.toLowerCase() : '';
-	if (Resource.isSupportedImageMimeType(mime)) {
-		let newSrc = `./${Resource.filename(resource)}`;
+	if (ResourceModel.isSupportedImageMimeType(mime)) {
+		let newSrc = `./${ResourceModel.filename(resource)}`;
 		if (resourceBaseUrl) newSrc = resourceBaseUrl + newSrc;
 		return {
 			'data-resource-id': resource.id,

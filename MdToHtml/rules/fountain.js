@@ -1,4 +1,4 @@
-const fountain = require('lib/vendor/fountain.min.js');
+const fountain = require('../../vendor/fountain.min.js');
 
 const fountainCss = `
 .fountain {
@@ -110,8 +110,15 @@ function renderFountainScript(content) {
 }
 
 function addContextAssets(context) {
-	if ('fountain' in context.css) return;
-	context.css['fountain'] = fountainCss;
+	if ('fountain' in context.pluginAssets) return;
+
+	context.pluginAssets['fountain'] = [
+		{
+			inline: true,
+			text: fountainCss,
+			mime: 'text/css',
+		},
+	];
 }
 
 function installRule(markdownIt, mdOptions, ruleOptions, context) {
