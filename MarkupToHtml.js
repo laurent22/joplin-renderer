@@ -3,9 +3,12 @@ const HtmlToHtml = require('./HtmlToHtml');
 
 class MarkupToHtml {
 	constructor(options) {
-		if (!options.ResourceModel) throw new Error('Resource model is required');
+		this.options_ = Object.assign({}, {
+			ResourceModel: {
+				isResourceUrl: (src) => false,
+			},
+		}, options);
 
-		this.options_ = options;
 		this.renderers_ = {};
 	}
 

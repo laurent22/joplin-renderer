@@ -63,8 +63,6 @@ class MdToHtml {
 	}
 
 	processPluginAssets(pluginAssets) {
-		console.info('pluginAssets', pluginAssets);
-
 		const files = [];
 		const cssStrings = [];
 		for (const pluginName in pluginAssets) {
