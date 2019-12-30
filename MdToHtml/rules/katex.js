@@ -230,6 +230,7 @@ module.exports = function(context) {
 
 		options = options || {};
 		options.macros = context.__katex.macros;
+		options.trust = true;
 
 		// set KaTeX as the renderer for markdown-it-simplemath
 		var katexInline = function(latex) {
