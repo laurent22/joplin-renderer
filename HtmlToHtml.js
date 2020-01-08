@@ -34,7 +34,7 @@ class HtmlToHtml {
 
 		return {
 			html: styleHtml + html,
-			cssFiles: [],
+			pluginAssets: [],
 		};
 	}
 }

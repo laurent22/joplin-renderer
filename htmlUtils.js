@@ -1,6 +1,10 @@
 const Entities = require('html-entities').AllHtmlEntities;
 const htmlentities = new Entities().encode;
 
+// [\s\S] instead of . for multiline matching
+// https://stackoverflow.com/a/16119722/561309
+const imageRegex = /<img([\s\S]*?)src=["']([\s\S]*?)["']([\s\S]*?)>/gi;
+
 class HtmlUtils {
 	
 	attributesHtml(attr) {
