@@ -2,26 +2,15 @@
 
 'use strict';
 
-var katex = require('katex');
+let katex = require('katex');
 const md5 = require('md5');
 const mhchemModule = require('./katex_mhchem.js');
 
+// Katex macros include circular references so we need
+// to serialize them with json-stringify-safe
+const stringifySafe = require('json-stringify-safe');
+
 katex = mhchemModule(katex);
-
-// const style = `
-// 	/*
-// 	This is to fix https://github.com/laurent22/joplin/issues/764
-// 	Without this, the tag attached to an equation float at an absolute position of the page,
-// 	instead of a position relative to the container.
-// 	2018-03-13: No longer needed??
-// 	*/
-
-// 	/*
-// 	.katex-display>.katex>.katex-html {
-// 		position: relative;
-// 	}
-// 	*/
-// `
 
 // Test if potential opening or closing delimieter
 // Assumes that there is a "$" at state.src[pos]
@@ -210,13 +199,13 @@ module.exports = function(context) {
 	};
 
 	function renderToStringWithCache(latex, options) {
-		const cacheKey = md5(escape(latex) + escape(JSON.stringify(options)));
+		const cacheKey = md5(escape(latex) + escape(stringifySafe(options)));
 		if (cacheKey in cache_) {
 			return cache_[cacheKey];
 		} else {
-			const beforeMacros = JSON.stringify(options.macros);
+			const beforeMacros = stringifySafe(options.macros);
 			const output = katex.renderToString(latex, options);
-			const afterMacros = JSON.stringify(options.macros);
+			const afterMacros = stringifySafe(options.macros);
 
 			// Don't cache the formulas that add macros, otherwise
 			// they won't be added on second run.
@@ -238,9 +227,7 @@ module.exports = function(context) {
 			try {
 				return renderToStringWithCache(latex, options);
 			} catch (error) {
-				if (options.throwOnError) {
-					console.log(error);
-				}
+				console.error('Katex error for:', latex, error);
 				return latex;
 			}
 		};
@@ -255,9 +242,7 @@ module.exports = function(context) {
 			try {
 				return `<p>${renderToStringWithCache(latex, options)}</p>`;
 			} catch (error) {
-				if (options.throwOnError) {
-					console.log(error);
-				}
+				console.error('Katex error for:', latex, error);
 				return latex;
 			}
 		};
