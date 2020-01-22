@@ -26,7 +26,7 @@ const plugins = {
 	abbr: { module: require('markdown-it-abbr') },
 	emoji: { module: require('markdown-it-emoji') },
 	insert: { module: require('markdown-it-ins') },
-	multitable: { module: require('markdown-it-multimd-table'), options: { enableMultilineRows: true, enableRowspan: true } },
+	multitable: { module: require('markdown-it-multimd-table'), options: { multiline: true, rowspan: true, headerless: true } },
 	toc: { module: require('markdown-it-toc-done-right'), options: { listType: 'ul', slugify: uslugify } },
 };
 const defaultNoteStyle = require('./defaultNoteStyle');
