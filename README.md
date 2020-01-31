@@ -1,5 +1,17 @@
 # Joplin Renderer
 
+* * *
+
+**This repository is deprecated!**
+
+The renderer has now been moved back to the official Joplin repository, to make development easier:
+
+https://github.com/laurent22/joplin/tree/master/ReactNativeClient/lib/joplin-renderer
+
+The renderer is still self-contained though, and can be used separately outside of the Joplin applications.
+
+* * *
+
 This is the renderer used by [Joplin](https://github.com/laurent22/joplin) to render notes in Markdown or HTML format.
 
 ## Installation
